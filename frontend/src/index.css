@@ -1,0 +1,70 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --color-bg-base: #06090e;
+    --color-bg-panel: #0a0e14;
+    --color-bg-card: #0f151e;
+    --color-bg-elevated: #141c26;
+    --color-border-subtle: #1c2838;
+    --color-border-prominent: #2a3a4e;
+    --color-accent: #06b6d4;
+  }
+
+  body {
+    background-color: var(--color-bg-base);
+    color: #e2e8f0;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  }
+
+  /* Custom scientific dark scrollbar */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: #0a0e14;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: #1e293b;
+    border-radius: 3px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: #334155;
+  }
+}
+
+@layer utilities {
+  /* Geospatial Coordinate Grid Pattern */
+  .bg-grid-pattern {
+    background-size: 40px 40px;
+    background-image: 
+      linear-gradient(to right, rgba(28, 40, 56, 0.4) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(28, 40, 56, 0.4) 1px, transparent 1px);
+  }
+
+  .bg-grid-dense {
+    background-size: 20px 20px;
+    background-image: 
+      linear-gradient(to right, rgba(30, 45, 65, 0.3) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(30, 45, 65, 0.3) 1px, transparent 1px);
+  }
+
+  .bg-radar-concentric {
+    background-image: radial-gradient(circle, rgba(6, 182, 212, 0.08) 1px, transparent 1px),
+                      radial-gradient(circle, rgba(6, 182, 212, 0.03) 80px, transparent 81px);
+  }
+
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}
