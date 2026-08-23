@@ -1,9 +1,11 @@
 from fastapi import APIRouter, UploadFile, File, HTTPException, status
-from fastapi.responses import FileResponse
+from fastapi.responses import RedirectResponse
 from typing import Dict, Any
 
 from app.services.image_service import image_service
+from app.services.appwrite_image_service import appwrite_image_service
 from app.schemas.image import ImageUploadResponse
+from app.core.config import settings
 
 router = APIRouter(prefix="/images", tags=["Images"])
 
@@ -12,7 +14,7 @@ router = APIRouter(prefix="/images", tags=["Images"])
     response_model=ImageUploadResponse,
     status_code=status.HTTP_201_CREATED,
     summary="Upload satellite imagery",
-    description="Accepts raster imagery (.tif, .tiff, .png, .jpg, .jpeg, .zip), extracts metadata, generates preview, and returns image metadata."
+    description="Accepts raster imagery (.tif, .tiff, .png, .jpg, .jpeg, .zip), extracts metadata in-memory, and stores 100% of binary files and records in Appwrite Storage & Database."
 )
 async def upload_image(file: UploadFile = File(...)):
     if not file.filename:
@@ -44,12 +46,13 @@ async def upload_image(file: UploadFile = File(...)):
 
 @router.get(
     "/{image_id}",
-    response_model=ImageUploadResponse,
     summary="Get image metadata",
-    description="Retrieve stored metadata for an uploaded image by its unique ID."
+    description="Retrieve stored metadata for an uploaded image by its unique Appwrite ID."
 )
 async def get_image_metadata(image_id: str):
-    meta = image_service.get_metadata(image_id)
+    meta = await appwrite_image_service.get_image(image_id)
+    if not meta:
+        meta = image_service.get_metadata(image_id)
     if not meta:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -60,27 +63,17 @@ async def get_image_metadata(image_id: str):
 @router.get(
     "/{image_id}/preview",
     summary="Get image preview",
-    description="Stream the generated web-friendly raster preview."
+    description="Redirects to Appwrite Storage file preview URL."
 )
 async def get_image_preview(image_id: str):
-    preview_path = image_service.get_preview_path(image_id)
-    if not preview_path or not preview_path.exists():
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Preview for image ID '{image_id}' not found."
-        )
-    return FileResponse(preview_path, media_type="image/png")
+    view_url = f"{settings.APPWRITE_ENDPOINT}/storage/buckets/{settings.APPWRITE_BUCKET_ID}/files/{image_id}/view?project={settings.APPWRITE_PROJECT_ID}"
+    return RedirectResponse(url=view_url)
 
 @router.get(
     "/{image_id}/file",
     summary="Download original image",
-    description="Download the raw uploaded satellite imagery file."
+    description="Redirects to Appwrite Storage file download URL."
 )
 async def get_original_file(image_id: str):
-    original_path = image_service.get_original_path(image_id)
-    if not original_path or not original_path.exists():
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Original file for image ID '{image_id}' not found."
-        )
-    return FileResponse(original_path, filename=original_path.name)
+    download_url = f"{settings.APPWRITE_ENDPOINT}/storage/buckets/{settings.APPWRITE_BUCKET_ID}/files/{image_id}/download?project={settings.APPWRITE_PROJECT_ID}"
+    return RedirectResponse(url=download_url)

@@ -1,4 +1,22 @@
+from enum import Enum
+from typing import Optional
 from pydantic import BaseModel, Field
+
+
+class AnalysisTask(str, Enum):
+    VQA = "vqa"
+    OBJECT_GROUNDING = "object_grounding"
+    CHANGE_DETECTION = "change_detection"
+    OPTICAL_SAR = "optical_sar"
+    SEGMENTATION = "segmentation"
+    UNKNOWN = "unknown"
+
+
+class TaskClassification(BaseModel):
+    task: AnalysisTask = Field(..., description="Classified remote sensing analysis task")
+    subtask: str = Field(..., description="Short snake_case subtask identifier")
+    confidence: float = Field(..., ge=0.0, le=1.0, description="Confidence score between 0.0 and 1.0")
+    reasoning: str = Field(..., description="Short concise explanation of the classification")
 
 
 class QueryRequest(BaseModel):
@@ -12,6 +30,7 @@ class QueryResponse(BaseModel):
     image_id: str
     query: str
     mode: str
-    status: str
-    answer: str | None = None
-    confidence: float | None = None
+    status: str = "classified"
+    classification: TaskClassification
+    answer: Optional[str] = None
+    confidence: Optional[float] = None

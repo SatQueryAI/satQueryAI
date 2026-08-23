@@ -22,6 +22,12 @@ class Settings(BaseSettings):
     APPWRITE_DATABASE_ID: str = "6a8ac43a0027d3534c2c"
     APPWRITE_IMAGE_COLLECTION_ID: str = "images"
     APPWRITE_BUCKET_ID: str = "6a8ac4580027071eb467"
+
+    # OpenRouter REST API Configuration
+    OPENROUTER_API_KEY: str = ""
+    OPENROUTER_MODEL: str = "google/gemini-2.5-flash"
+    OPENROUTER_API_BASE_URL: str = "https://openrouter.ai/api/v1"
+    OPENROUTER_TIMEOUT_SECONDS: float = 15.0
     
     # CORS
     CORS_ORIGINS: list[str] = [
@@ -39,8 +45,3 @@ class Settings(BaseSettings):
     )
 
 settings = Settings()
-
-# Ensure directories exist
-settings.STORAGE_DIR.mkdir(parents=True, exist_ok=True)
-settings.UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
-settings.PREVIEWS_DIR.mkdir(parents=True, exist_ok=True)
