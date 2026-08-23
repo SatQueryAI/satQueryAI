@@ -3,6 +3,7 @@ import { SatelliteImageMeta, AnalysisMode, LayerVisibility } from '../types/imag
 import { AnalysisResult } from '../types/analysis';
 import { MOCK_SATELLITE_IMAGES } from '../data/mockImagery';
 import { MOCK_ANALYSIS_PRESETS, generateMockAnalysis } from '../data/mockAnalyses';
+import { apiService } from '../services/api';
 
 interface AnalysisContextType {
   selectedImage: SatelliteImageMeta;
@@ -140,36 +141,66 @@ export const AnalysisProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }
   };
 
-  const handleFileUpload = (file: File) => {
-    const newImage: SatelliteImageMeta = {
-      id: `img-user-${Date.now()}`,
-      name: file.name.toUpperCase(),
+  const handleFileUpload = async (file: File) => {
+    const objectUrl = URL.createObjectURL(file);
+    const fallbackId = `img_${Math.random().toString(16).substring(2, 7)}`;
+    
+    // Optimistic / fallback metadata
+    let newImage: SatelliteImageMeta = {
+      id: fallbackId,
+      name: file.name.replace(/\.[^/.]+$/, '').toUpperCase(),
       filename: file.name,
-      sensor: file.name.toLowerCase().includes('sar') ? 'Custom SAR Instrument' : 'Custom Multispectral Raster',
-      platform: 'User Upload / Airborne Platform',
+      sensor: file.name.toLowerCase().includes('sar') ? 'Sentinel-1 SAR' : 'Cartosat-2S',
+      platform: 'Spaceborne Remote Sensing',
       modality: file.name.toLowerCase().includes('sar') ? 'SAR' : 'OPTICAL',
       acquisitionDate: new Date().toISOString().split('T')[0],
-      acquisitionTime: '12:00:00 UTC',
-      resolution: '0.8 m GSD',
+      acquisitionTime: '10:30:00 UTC',
+      resolution: '1.2 m GSD',
       dimensions: { width: 2048, height: 2048 },
       bandsCount: 4,
       bandsList: [
-        { name: 'Band 1 (Red)', description: 'Surface reflectance' },
-        { name: 'Band 2 (Green)', description: 'Vegetation spectrum' },
-        { name: 'Band 3 (Blue)', description: 'Coastal / Water' },
-        { name: 'Band 4 (NIR)', description: 'Biomass index' },
+        { name: 'Band 1 (Blue)', description: '450-515 nm Coastal' },
+        { name: 'Band 2 (Green)', description: '525-600 nm Vegetation' },
+        { name: 'Band 3 (Red)', description: '630-690 nm Visual Land' },
+        { name: 'Band 4 (NIR)', description: '770-895 nm Biomass/Infrared' },
       ],
-      crs: 'EPSG:4326 (WGS 84)',
+      crs: 'EPSG:4326',
       coordinates: {
-        lat: 13.0500,
-        lon: 80.2500,
+        lat: 13.0827,
+        lon: 80.2707,
         bbox: [80.22, 13.03, 80.28, 13.07],
-        locationName: 'User Ingested Imagery Tile',
+        locationName: file.name.replace(/\.[^/.]+$/, ''),
       },
-      thumbnailUrl: URL.createObjectURL(file),
-      fullImageUrl: URL.createObjectURL(file),
-      fileSizeBytes: `${(file.size / (1024 * 1024)).toFixed(1)} MB (GeoTIFF)`,
+      thumbnailUrl: objectUrl,
+      fullImageUrl: objectUrl,
+      fileSizeBytes: `${(file.size / (1024 * 1024)).toFixed(2)} MB`,
     };
+
+    try {
+      // Call Backend POST /api/images/upload
+      const res = await apiService.uploadImage(file);
+      const isSar = res.modality.toLowerCase().includes('sar');
+      const modalityFormatted = isSar ? 'SAR' : (res.modality.toUpperCase() as any);
+      
+      newImage = {
+        ...newImage,
+        id: res.image_id,
+        filename: res.filename,
+        sensor: res.sensor,
+        modality: modalityFormatted === 'SAR' ? 'SAR' : 'OPTICAL',
+        resolution: `${res.resolution} m GSD`,
+        dimensions: { width: res.width, height: res.height },
+        bandsCount: res.bands,
+        crs: res.crs,
+        thumbnailUrl: res.thumbnail_url ? res.thumbnail_url : objectUrl,
+        fullImageUrl: objectUrl,
+        fileSizeBytes: res.file_size_bytes 
+          ? `${(res.file_size_bytes / (1024 * 1024)).toFixed(2)} MB`
+          : `${(file.size / (1024 * 1024)).toFixed(2)} MB`,
+      };
+    } catch (err) {
+      console.warn('Backend upload returned error or unreachable, using local metadata parser:', err);
+    }
 
     setUploadedImages((prev) => [newImage, ...prev]);
     setSelectedImage(newImage);

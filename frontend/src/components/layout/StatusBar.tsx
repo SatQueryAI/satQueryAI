@@ -1,61 +1,60 @@
 import React from 'react';
-import { Activity, Cpu, Database, Globe, Zap, Terminal } from 'lucide-react';
+import { Cpu, Globe, Zap, SlidersHorizontal, Hash } from 'lucide-react';
 import { useAnalysis } from '../../context/AnalysisContext';
 
 export const StatusBar: React.FC = () => {
-  const { isAnalyzing, selectedImage, currentResult } = useAnalysis();
+  const { selectedImage, currentResult } = useAnalysis();
 
   return (
-    <footer className="h-7 bg-space-950 border-t border-space-border px-3 flex items-center justify-between text-[11px] font-mono text-slate-400 select-none z-20 shrink-0">
-      {/* Left: Backend & Inference status */}
-      <div className="flex items-center gap-4">
+    <footer className="h-7 bg-[#070b12] border-t border-[#1e293b] px-4 flex items-center justify-between text-[11px] font-mono text-slate-400 select-none z-20 shrink-0">
+      {/* Left: Backend, Model, GPU, Latency */}
+      <div className="flex items-center gap-5">
+        {/* Backend Connected */}
         <div className="flex items-center gap-1.5">
-          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+          <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
           <span className="text-slate-300">Backend:</span>
-          <span className="text-emerald-400">FastAPI Connected</span>
+          <span className="text-emerald-400 font-medium">Connected</span>
         </div>
 
-        <div className="hidden sm:flex items-center gap-1.5 border-l border-space-border pl-4">
-          <span className="w-1.5 h-1.5 rounded-full bg-geo-cyan"></span>
+        {/* Model */}
+        <div className="flex items-center gap-1.5">
+          <SlidersHorizontal className="w-3 h-3 text-slate-400" />
           <span className="text-slate-300">Model:</span>
-          <span className="text-geo-cyan">Remote-Sensing VLM</span>
+          <span className="text-cyan-400 font-medium">Remote-Sensing VLM</span>
         </div>
 
-        <div className="hidden md:flex items-center gap-1.5 border-l border-space-border pl-4">
+        {/* GPU */}
+        <div className="hidden sm:flex items-center gap-1.5">
           <Cpu className="w-3 h-3 text-slate-400" />
           <span className="text-slate-300">GPU:</span>
-          <span className="text-slate-300">RTX 4090 / CUDA 12.4</span>
+          <span className="text-emerald-400 font-medium">RTX 4090</span>
+        </div>
+
+        {/* Latency */}
+        <div className="hidden md:flex items-center gap-1.5">
+          <Zap className="w-3 h-3 text-slate-400" />
+          <span className="text-slate-300">Latency:</span>
+          <span className="text-slate-200">{currentResult?.latencySeconds || 2.38}s</span>
         </div>
       </div>
 
-      {/* Center: Realtime Processing Indicator */}
-      {isAnalyzing && (
-        <div className="hidden lg:flex items-center gap-2 text-geo-cyan animate-pulse">
-          <Activity className="w-3 h-3 animate-spin" />
-          <span>INFERENCE EXECUTING...</span>
-        </div>
-      )}
-
-      {/* Right: Latency + Projection + Session */}
-      <div className="flex items-center gap-4">
-        <div className="hidden sm:flex items-center gap-1.5">
-          <Zap className="w-3 h-3 text-amber-400" />
-          <span>Latency:</span>
-          <span className="text-slate-200">{currentResult ? `${currentResult.latencySeconds}s` : '2.4s'}</span>
-        </div>
-
-        <div className="hidden lg:flex items-center gap-1.5 border-l border-space-border pl-4">
+      {/* Right: CRS & Session */}
+      <div className="flex items-center gap-5">
+        {/* CRS */}
+        <div className="flex items-center gap-1.5">
           <Globe className="w-3 h-3 text-slate-400" />
-          <span>CRS:</span>
-          <span className="text-slate-300">{selectedImage.crs.split(' ')[0]}</span>
+          <span className="text-slate-400">CRS:</span>
+          <span className="text-slate-200 font-medium">{selectedImage?.crs.split(' ')[0] || 'EPSG:4326'}</span>
         </div>
 
-        <div className="flex items-center gap-1.5 border-l border-space-border pl-4">
-          <Terminal className="w-3 h-3 text-slate-400" />
-          <span>Session:</span>
-          <span className="text-slate-300">SAT-8F2A</span>
+        {/* Session */}
+        <div className="flex items-center gap-1.5">
+          <Hash className="w-3 h-3 text-slate-400" />
+          <span className="text-slate-400">Session:</span>
+          <span className="text-slate-200 font-medium">SAT-8F2A</span>
         </div>
       </div>
     </footer>
   );
 };
+

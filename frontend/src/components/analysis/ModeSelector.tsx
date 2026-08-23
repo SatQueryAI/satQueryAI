@@ -1,6 +1,6 @@
 import React from 'react';
 import { AnalysisMode } from '../../types/imagery';
-import { Layers, GitCompare, Radio, Clock, Shield } from 'lucide-react';
+import { Layers, GitCompare, Radio, Clock, ChevronDown } from 'lucide-react';
 import { useAnalysis } from '../../context/AnalysisContext';
 
 export const ModeSelector: React.FC = () => {
@@ -10,26 +10,26 @@ export const ModeSelector: React.FC = () => {
     {
       id: 'SINGLE_IMAGE',
       label: 'Single Image',
-      description: 'Visual QA, feature grounding & land-cover analysis',
+      description: 'Analyze one image',
       icon: Layers,
     },
     {
-      id: 'TEMPORAL_CHANGE',
-      label: 'Temporal Change',
-      description: 'Bi-temporal comparison & infrastructure change detection',
-      icon: Clock,
+      id: 'IMAGE_COMPARISON',
+      label: 'Compare Images',
+      description: 'Compare two time periods',
+      icon: GitCompare,
     },
     {
       id: 'OPTICAL_SAR',
       label: 'Optical + SAR',
-      description: 'Multimodal radar backscatter & optical cross-reasoning',
+      description: 'Multi-modal analysis',
       icon: Radio,
     },
     {
-      id: 'IMAGE_COMPARISON',
-      label: 'Image Comparison',
-      description: 'Synchronized dual-view multi-raster comparison',
-      icon: GitCompare,
+      id: 'TEMPORAL_CHANGE',
+      label: 'Change Detection',
+      description: 'Detect temporal changes',
+      icon: Clock,
     },
   ];
 
@@ -46,11 +46,11 @@ export const ModeSelector: React.FC = () => {
 
   return (
     <div className="space-y-2">
-      <div className="text-[11px] font-mono font-semibold uppercase tracking-wider text-slate-400">
+      <div className="text-xs font-semibold text-slate-200">
         Analysis Mode
       </div>
 
-      <div className="grid grid-cols-1 gap-1">
+      <div className="grid grid-cols-1 gap-1.5">
         {modes.map((m) => {
           const Icon = m.icon;
           const isSelected = analysisMode === m.id;
@@ -58,23 +58,26 @@ export const ModeSelector: React.FC = () => {
             <button
               key={m.id}
               onClick={() => handleModeChange(m.id)}
-              className={`w-full flex items-start gap-2.5 p-2 rounded text-left transition-all border ${
+              className={`w-full flex items-center justify-between p-2.5 rounded-lg text-left transition-all border ${
                 isSelected
-                  ? 'bg-space-800 border-geo-cyan/50 text-white shadow-sm'
-                  : 'bg-space-850/60 border-space-border text-slate-400 hover:text-slate-200 hover:bg-space-800'
+                  ? 'bg-[#0e2238] border-cyan-500/50 text-white shadow-sm'
+                  : 'bg-[#0d131f]/60 border-[#1e293b] text-slate-400 hover:text-slate-200 hover:bg-[#0d131f]'
               }`}
             >
-              <div className={`p-1 rounded shrink-0 ${isSelected ? 'bg-geo-cyan/20 text-geo-cyan' : 'bg-space-900 text-slate-400'}`}>
-                <Icon className="w-3.5 h-3.5" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className={`text-xs font-medium leading-tight ${isSelected ? 'text-slate-100' : 'text-slate-300'}`}>
-                  {m.label}
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className={`${isSelected ? 'text-cyan-400' : 'text-slate-400'}`}>
+                  <Icon className="w-4 h-4" />
                 </div>
-                <div className="text-[10px] text-slate-400 leading-tight mt-0.5 truncate">
-                  {m.description}
+                <div className="min-w-0">
+                  <div className={`text-xs font-medium leading-tight ${isSelected ? 'text-cyan-200' : 'text-slate-200'}`}>
+                    {m.label}
+                  </div>
+                  <div className="text-[10px] text-slate-400 leading-tight mt-0.5 truncate">
+                    {m.description}
+                  </div>
                 </div>
               </div>
+              {isSelected && <ChevronDown className="w-3.5 h-3.5 text-cyan-400 shrink-0" />}
             </button>
           );
         })}
@@ -82,3 +85,4 @@ export const ModeSelector: React.FC = () => {
     </div>
   );
 };
+

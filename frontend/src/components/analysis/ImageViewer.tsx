@@ -1,10 +1,9 @@
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useRef, useState } from 'react';
 import { useAnalysis } from '../../context/AnalysisContext';
-import { ImageControls } from './ImageControls';
 import { VisualEvidenceOverlay } from './VisualEvidenceOverlay';
 import { TemporalSwipeViewer } from './TemporalSwipeViewer';
 import { OpticalSarViewer } from './OpticalSarViewer';
-import { Crosshair, Upload, Compass, Maximize2 } from 'lucide-react';
+import { Plus, Minus, Layers, Crosshair, Maximize2, RotateCcw } from 'lucide-react';
 
 export const ImageViewer: React.FC = () => {
   const {
@@ -16,23 +15,16 @@ export const ImageViewer: React.FC = () => {
     panOffset,
     setPanOffset,
     currentResult,
-    handleFileUpload,
+    resetViewport,
+    toggleLayer,
   } = useAnalysis();
 
   const containerRef = useRef<HTMLDivElement>(null);
   const [isPanning, setIsPanning] = useState(false);
   const [dragStart, setDragStart] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
-  const [cursorGeo, setCursorGeo] = useState<{ lat: number; lon: number; px: number; py: number; dn: number }>({
-    lat: 13.0827,
-    lon: 80.2707,
-    px: 1024,
-    py: 1024,
-    dn: 842,
-  });
 
-  // Pan & drag handlers
   const handleMouseDown = (e: React.MouseEvent) => {
-    if (analysisMode === 'TEMPORAL_CHANGE') return; // Handled by divider
+    if (analysisMode === 'TEMPORAL_CHANGE') return;
     if (e.button === 0) {
       setIsPanning(true);
       setDragStart({ x: e.clientX - panOffset.x, y: e.clientY - panOffset.y });
@@ -40,30 +32,6 @@ export const ImageViewer: React.FC = () => {
   };
 
   const handleMouseMove = (e: React.MouseEvent) => {
-    if (containerRef.current) {
-      const rect = containerRef.current.getBoundingClientRect();
-      const relX = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
-      const relY = Math.max(0, Math.min(1, (e.clientY - rect.top) / rect.height));
-
-      // Calculate approximate coordinate within raster bounding box
-      if (selectedImage && selectedImage.coordinates) {
-        const [minLon, minLat, maxLon, maxLat] = selectedImage.coordinates.bbox;
-        const curLon = minLon + relX * (maxLon - minLon);
-        const curLat = maxLat - relY * (maxLat - minLat);
-        const px = Math.round(relX * selectedImage.dimensions.width);
-        const py = Math.round(relY * selectedImage.dimensions.height);
-        const dn = Math.round(300 + (px * 0.4 + py * 0.3) % 700);
-
-        setCursorGeo({
-          lat: Number(curLat.toFixed(4)),
-          lon: Number(curLon.toFixed(4)),
-          px,
-          py,
-          dn,
-        });
-      }
-    }
-
     if (isPanning) {
       setPanOffset({
         x: e.clientX - dragStart.x,
@@ -82,28 +50,10 @@ export const ImageViewer: React.FC = () => {
     setZoomLevel((prev) => Math.max(50, Math.min(400, prev + zoomDelta)));
   };
 
-  if (!selectedImage) {
-    return (
-      <div className="flex-1 h-full bg-space-950 bg-grid-dense flex flex-col items-center justify-center p-8 select-none">
-        <div className="max-w-md w-full bg-space-900/90 border border-space-borderLight rounded-lg p-6 text-center space-y-4 shadow-2xl">
-          <div className="w-12 h-12 rounded-full bg-space-850 border border-space-border flex items-center justify-center mx-auto text-slate-400">
-            <Upload className="w-6 h-6" />
-          </div>
-          <div>
-            <h3 className="text-sm font-mono font-semibold text-slate-200 uppercase tracking-wider">
-              No Imagery Loaded
-            </h3>
-            <p className="text-xs text-slate-400 font-mono mt-1">
-              Drop a satellite raster here or select an analysis feed from the left panel.
-            </p>
-          </div>
-          <div className="pt-2 text-[10px] font-mono text-slate-400 border-t border-space-border">
-            Supported: GeoTIFF · TIFF · Complex SAR · Multispectral PNG
-          </div>
-        </div>
-      </div>
-    );
-  }
+  const handleZoomIn = () => setZoomLevel((prev) => Math.min(prev + 20, 400));
+  const handleZoomOut = () => setZoomLevel((prev) => Math.max(prev - 20, 50));
+
+  if (!selectedImage) return null;
 
   return (
     <div
@@ -112,48 +62,69 @@ export const ImageViewer: React.FC = () => {
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
       onWheel={handleWheel}
-      className={`relative flex-1 h-full bg-space-950 overflow-hidden select-none flex items-center justify-center ${
+      className={`relative flex-1 h-full bg-[#070b12] overflow-hidden select-none flex items-center justify-center ${
         layerVisibility.grid ? 'bg-grid-pattern' : ''
       } ${isPanning ? 'cursor-grabbing' : 'cursor-crosshair'}`}
     >
-      {/* Top-Left Telemetry Overlay */}
-      <div className="absolute top-3 left-3 z-20 pointer-events-none bg-space-900/85 backdrop-blur-md border border-space-border px-2.5 py-1.5 rounded text-[11px] font-mono space-y-0.5 shadow-md">
-        <div className="text-geo-cyan font-semibold flex items-center gap-1.5">
-          <span className="w-1.5 h-1.5 rounded-full bg-geo-cyan animate-pulse"></span>
-          <span>{selectedImage.sensor.toUpperCase()}</span>
+      {/* Top-Left Metadata HUD Card */}
+      <div className="absolute top-4 left-4 z-20 pointer-events-auto bg-[#0d131f]/90 backdrop-blur-md border border-[#1e293b] px-3 py-2 rounded-lg text-xs font-mono shadow-xl space-y-0.5">
+        <div className="text-white font-bold tracking-wide">
+          {selectedImage.sensor.toUpperCase()}
         </div>
-        <div className="text-slate-400 text-[10px]">
-          GSD: <span className="text-slate-200">{selectedImage.resolution}</span> · BANDS: <span className="text-slate-200">{selectedImage.bandsCount}</span>
+        <div className="text-slate-400 text-[11px]">
+          {selectedImage.resolution} • {selectedImage.bandsCount} Bands • {selectedImage.dimensions.width} × {selectedImage.dimensions.height}
         </div>
-      </div>
-
-      {/* Top-Right Raster Resolution Overlay */}
-      <div className="absolute top-3 right-3 z-20 pointer-events-none bg-space-900/85 backdrop-blur-md border border-space-border px-2.5 py-1.5 rounded text-[11px] font-mono text-right space-y-0.5 shadow-md">
-        <div className="text-slate-200 font-medium">
-          {selectedImage.dimensions.width} × {selectedImage.dimensions.height} px
-        </div>
-        <div className="text-slate-400 text-[10px]">
-          {selectedImage.crs.split(' ')[0]}
+        <div className="text-slate-400 text-[11px]">
+          Acquired: {selectedImage.acquisitionDate || '17 Aug 2026'} &nbsp;&nbsp; {selectedImage.crs.split(' ')[0]}
         </div>
       </div>
 
-      {/* Bottom-Left Live Cursor Coordinates Reticle */}
-      {layerVisibility.coordinates && (
-        <div className="absolute bottom-3 left-3 z-20 pointer-events-none bg-space-900/85 backdrop-blur-md border border-space-border px-2.5 py-1.5 rounded text-[11px] font-mono flex items-center gap-3 shadow-md text-slate-300">
-          <div className="flex items-center gap-1">
-            <Crosshair className="w-3 h-3 text-geo-cyan" />
-            <span>LAT: <strong className="text-slate-100 font-semibold">{cursorGeo.lat}° N</strong></span>
-            <span className="text-slate-400">·</span>
-            <span>LON: <strong className="text-slate-100 font-semibold">{cursorGeo.lon}° E</strong></span>
-          </div>
-          <div className="hidden sm:flex items-center gap-2 border-l border-space-border pl-3 text-[10px] text-slate-400">
-            <span>PX: [{cursorGeo.px}, {cursorGeo.py}]</span>
-            <span>DN: {cursorGeo.dn}</span>
-          </div>
-        </div>
-      )}
+      {/* Top-Right Vertical Map Controls Toolbar */}
+      <div className="absolute top-4 right-4 z-20 flex flex-col gap-1 bg-[#0d131f]/90 backdrop-blur-md border border-[#1e293b] p-1 rounded-lg shadow-xl text-slate-300">
+        <button
+          onClick={handleZoomIn}
+          className="p-2 hover:bg-[#1a2538] hover:text-white rounded transition-colors"
+          title="Zoom In"
+        >
+          <Plus className="w-4 h-4" />
+        </button>
+        <button
+          onClick={handleZoomOut}
+          className="p-2 hover:bg-[#1a2538] hover:text-white rounded transition-colors"
+          title="Zoom Out"
+        >
+          <Minus className="w-4 h-4" />
+        </button>
+        <button
+          onClick={() => toggleLayer('original')}
+          className="p-2 hover:bg-[#1a2538] hover:text-white rounded transition-colors"
+          title="Toggle Layers"
+        >
+          <Layers className="w-4 h-4" />
+        </button>
+        <button
+          onClick={resetViewport}
+          className="p-2 hover:bg-[#1a2538] hover:text-geo-cyan rounded transition-colors"
+          title="Recenter"
+        >
+          <Crosshair className="w-4 h-4" />
+        </button>
+        <button
+          onClick={() => {
+            if (!document.fullscreenElement) {
+              containerRef.current?.requestFullscreen();
+            } else {
+              document.exitFullscreen();
+            }
+          }}
+          className="p-2 hover:bg-[#1a2538] hover:text-white rounded transition-colors"
+          title="Fullscreen"
+        >
+          <Maximize2 className="w-4 h-4" />
+        </button>
+      </div>
 
-      {/* Viewport Canvas Render Switcher */}
+      {/* Main Satellite Imagery Viewport */}
       {analysisMode === 'TEMPORAL_CHANGE' && selectedImage.isPair ? (
         <TemporalSwipeViewer image={selectedImage} />
       ) : analysisMode === 'OPTICAL_SAR' ? (
@@ -165,24 +136,54 @@ export const ImageViewer: React.FC = () => {
             transform: `translate(${panOffset.x}px, ${panOffset.y}px) scale(${zoomLevel / 100})`,
           }}
         >
-          {/* Main Raster Render */}
+          {/* Main Satellite Raster */}
           {layerVisibility.original && (
             <img
               src={selectedImage.fullImageUrl}
               alt={selectedImage.name}
-              className="w-full h-full object-contain max-w-full max-h-full drop-shadow-2xl select-none pointer-events-none"
+              className="w-full h-full object-contain max-w-full max-h-full drop-shadow-2xl select-none pointer-events-none rounded"
             />
           )}
 
-          {/* Evidence Region Overlays */}
+          {/* Evidence Region Overlays (Bounding boxes with colored pill tags) */}
           {currentResult && currentResult.evidenceRegions.length > 0 && (
             <VisualEvidenceOverlay evidenceRegions={currentResult.evidenceRegions} />
           )}
         </div>
       )}
 
-      {/* Floating Canvas Controls */}
-      <ImageControls />
+      {/* Bottom-Left Scale Bar */}
+      <div className="absolute bottom-4 left-4 z-20 pointer-events-none flex items-center gap-2 bg-[#0d131f]/80 backdrop-blur-sm border border-[#1e293b] px-2.5 py-1 rounded text-[11px] font-mono text-slate-300">
+        <span>200 m</span>
+        <div className="w-12 h-1.5 border-b-2 border-l-2 border-r-2 border-slate-300"></div>
+      </div>
+
+      {/* Bottom-Center Coordinates Pill */}
+      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 pointer-events-none bg-[#0d131f]/90 backdrop-blur-md border border-[#1e293b] px-3 py-1 rounded-full text-xs font-mono text-slate-300 shadow-md">
+        13.0827° N, 80.2787° E
+      </div>
+
+      {/* Bottom-Right Overview / Mini-map Inset */}
+      <div className="absolute bottom-4 right-4 z-20 w-36 h-24 bg-[#0d131f]/90 backdrop-blur-md border border-[#1e293b] rounded-lg overflow-hidden shadow-2xl p-1">
+        <div className="relative w-full h-full bg-black rounded overflow-hidden">
+          <img
+            src={selectedImage.thumbnailUrl}
+            alt="Overview"
+            className="w-full h-full object-cover opacity-75"
+          />
+          {/* Yellow Viewport Boundary Box */}
+          <div
+            className="absolute border-2 border-[#facc15] bg-[#facc15]/10 pointer-events-none"
+            style={{
+              left: '25%',
+              top: '20%',
+              width: '50%',
+              height: '55%',
+            }}
+          />
+        </div>
+      </div>
     </div>
   );
 };
+

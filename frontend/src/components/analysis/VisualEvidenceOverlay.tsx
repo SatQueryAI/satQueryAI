@@ -11,11 +11,39 @@ export const VisualEvidenceOverlay: React.FC<Props> = ({ evidenceRegions }) => {
 
   if (!layerVisibility.evidence && !layerVisibility.detection) return null;
 
+  const getColorStyles = (color?: string, category?: string) => {
+    const c = color || (category === 'infrastructure' ? 'cyan' : category === 'vegetation' ? 'emerald' : 'amber');
+    
+    if (c === 'cyan') {
+      return {
+        border: 'border-[#06b6d4]',
+        bg: 'bg-[#06b6d4]/10',
+        pill: 'bg-[#06b6d4] text-slate-950',
+        glow: 'shadow-[0_0_15px_rgba(6,182,212,0.4)]',
+      };
+    }
+    if (c === 'emerald') {
+      return {
+        border: 'border-[#22c55e]',
+        bg: 'bg-[#22c55e]/10',
+        pill: 'bg-[#22c55e] text-slate-950',
+        glow: 'shadow-[0_0_15px_rgba(34,197,94,0.4)]',
+      };
+    }
+    return {
+      border: 'border-[#facc15]',
+      bg: 'bg-[#facc15]/10',
+      pill: 'bg-[#facc15] text-slate-950',
+      glow: 'shadow-[0_0_15px_rgba(250,204,21,0.4)]',
+    };
+  };
+
   return (
     <div className="absolute inset-0 pointer-events-none z-10">
       {evidenceRegions.map((region) => {
         const [x, y, w, h] = region.bbox;
         const isHighlighted = highlightedEvidenceId === region.id;
+        const styles = getColorStyles(region.badgeColor, region.category);
 
         return (
           <div
@@ -33,33 +61,23 @@ export const VisualEvidenceOverlay: React.FC<Props> = ({ evidenceRegions }) => {
               height: `${h}%`,
             }}
           >
-            {/* Box Border & Corner Reticles */}
+            {/* Box Border */}
             <div
-              className={`w-full h-full border-2 transition-all relative ${
-                isHighlighted
-                  ? 'border-geo-cyan bg-geo-cyan/15 shadow-[0_0_15px_rgba(6,182,212,0.3)]'
-                  : 'border-amber-400/80 bg-amber-400/5 hover:border-geo-cyan hover:bg-geo-cyan/10'
+              className={`w-full h-full border-2 transition-all relative ${styles.border} ${styles.bg} ${
+                isHighlighted ? `${styles.glow} ring-1 ring-white/40` : ''
               }`}
             >
-              {/* Corner crosshairs */}
-              <div className="absolute -top-1 -left-1 w-2 h-2 border-t-2 border-l-2 border-white" />
-              <div className="absolute -top-1 -right-1 w-2 h-2 border-t-2 border-r-2 border-white" />
-              <div className="absolute -bottom-1 -left-1 w-2 h-2 border-b-2 border-l-2 border-white" />
-              <div className="absolute -bottom-1 -right-1 w-2 h-2 border-b-2 border-r-2 border-white" />
-
-              {/* Tag Label */}
-              <div
-                className={`absolute -top-6 left-0 px-1.5 py-0.5 rounded text-[10px] font-mono font-semibold whitespace-nowrap flex items-center gap-1 shadow-sm select-none ${
-                  isHighlighted
-                    ? 'bg-geo-cyan text-space-950'
-                    : 'bg-space-900/90 text-amber-300 border border-amber-400/40 group-hover:bg-geo-cyan group-hover:text-space-950'
-                }`}
-              >
-                <span>{`0${region.index}`}</span>
-                <span>·</span>
-                <span>{region.label}</span>
-                <span className="opacity-80">({Math.round(region.confidence * 100)}%)</span>
-              </div>
+              {/* Tag Pill Badge (Top Left of Box) */}
+              {region.label && (
+                <div
+                  className={`absolute -top-6 left-0 px-2 py-0.5 rounded text-[10px] font-mono font-bold whitespace-nowrap flex items-center gap-1.5 shadow-md select-none transition-transform group-hover:scale-105 ${styles.pill}`}
+                >
+                  <span>{region.label}</span>
+                  <span className="font-extrabold text-[9px] px-1 py-0.2 bg-black/20 rounded">
+                    {Math.round(region.confidence * 100)}%
+                  </span>
+                </div>
+              )}
             </div>
           </div>
         );
@@ -67,3 +85,4 @@ export const VisualEvidenceOverlay: React.FC<Props> = ({ evidenceRegions }) => {
     </div>
   );
 };
+

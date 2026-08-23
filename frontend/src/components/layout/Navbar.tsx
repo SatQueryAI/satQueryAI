@@ -1,16 +1,9 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { 
-  Satellite, 
-  Search, 
-  Activity, 
-  Layers, 
-  FolderKanban, 
-  History, 
-  Database, 
-  FileText, 
-  Settings,
-  Terminal
+  Boxes, 
+  Bell,
+  Search,
 } from 'lucide-react';
 import { useAnalysis } from '../../context/AnalysisContext';
 
@@ -19,12 +12,12 @@ export const Navbar: React.FC = () => {
   const { setCommandPaletteOpen } = useAnalysis();
 
   const navLinks = [
-    { name: 'Analyze', path: '/analyze', icon: Layers },
-    { name: 'Projects', path: '/projects', icon: FolderKanban },
-    { name: 'History', path: '/history', icon: History },
-    { name: 'Datasets', path: '/datasets', icon: Database },
-    { name: 'Reports', path: '/reports', icon: FileText },
-    { name: 'Settings', path: '/settings', icon: Settings },
+    { name: 'Analyze', path: '/analyze' },
+    { name: 'Projects', path: '/projects' },
+    { name: 'History', path: '/history' },
+    { name: 'Datasets', path: '/datasets' },
+    { name: 'Reports', path: '/reports' },
+    { name: 'Settings', path: '/settings' },
   ];
 
   const isActive = (path: string) => {
@@ -33,42 +26,43 @@ export const Navbar: React.FC = () => {
   };
 
   return (
-    <header className="h-14 bg-space-900 border-b border-space-border px-4 flex items-center justify-between select-none z-30 shrink-0">
-      {/* Left: Brand Identity */}
-      <div className="flex items-center gap-6">
-        <Link to="/analyze" className="flex items-center gap-3 group">
-          <div className="w-8 h-8 rounded bg-space-850 border border-geo-cyan/40 flex items-center justify-center text-geo-cyan group-hover:border-geo-cyan transition-colors shadow-sm">
-            <Satellite className="w-4 h-4" />
+    <header className="h-14 bg-[#090e17] border-b border-[#1e293b] px-5 flex items-center justify-between select-none z-30 shrink-0">
+      {/* Left: Brand Logo & Title */}
+      <div className="flex items-center gap-8">
+        <Link to="/analyze" className="flex items-center gap-2.5 group">
+          <div className="text-cyan-400 group-hover:text-cyan-300 transition-colors">
+            {/* Custom satellite diamond crosshair icon */}
+            <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 2L2 12l10 10 10-10L12 2z" />
+              <path d="M12 8v8" />
+              <path d="M8 12h8" />
+              <circle cx="12" cy="12" r="2" fill="currentColor" />
+            </svg>
           </div>
           <div>
-            <div className="flex items-center gap-2">
-              <span className="font-semibold text-slate-100 tracking-tight text-sm">SatQuery AI</span>
-              <span className="text-[10px] font-mono font-medium px-1.5 py-0.2 bg-geo-cyan/10 border border-geo-cyan/30 text-geo-cyan rounded">
-                v0.1.0-VLM
-              </span>
+            <div className="font-bold text-white tracking-tight text-sm leading-none">
+              SatQuery AI
             </div>
-            <p className="text-[11px] text-slate-400 font-mono tracking-wide leading-none">
+            <p className="text-[11px] text-slate-400 font-sans tracking-wide leading-none mt-1">
               Remote Sensing Intelligence
             </p>
           </div>
         </Link>
 
-        {/* Global Nav Links */}
-        <nav className="hidden md:flex items-center gap-1 border-l border-space-border pl-6">
+        {/* Navigation Tabs */}
+        <nav className="hidden md:flex items-center gap-6 h-14">
           {navLinks.map((link) => {
-            const Icon = link.icon;
             const active = isActive(link.path);
             return (
               <Link
                 key={link.path}
                 to={link.path}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium transition-all ${
+                className={`h-full flex items-center text-xs font-medium transition-colors relative ${
                   active
-                    ? 'bg-space-800 text-geo-cyan border border-geo-cyan/30 shadow-sm'
-                    : 'text-slate-400 hover:text-slate-200 hover:bg-space-850 border border-transparent'
+                    ? 'text-cyan-400 border-b-2 border-cyan-400 font-semibold'
+                    : 'text-slate-400 hover:text-slate-200'
                 }`}
               >
-                <Icon className={`w-3.5 h-3.5 ${active ? 'text-geo-cyan' : 'text-slate-400'}`} />
                 <span>{link.name}</span>
               </Link>
             );
@@ -76,38 +70,34 @@ export const Navbar: React.FC = () => {
         </nav>
       </div>
 
-      {/* Right: Quick Search + Telemetry Status + User Info */}
-      <div className="flex items-center gap-3">
-        {/* Command Palette Trigger */}
-        <button
-          onClick={() => setCommandPaletteOpen(true)}
-          className="hidden sm:flex items-center gap-2 px-2.5 py-1 bg-space-850 hover:bg-space-800 border border-space-border rounded text-xs text-slate-400 hover:text-slate-200 transition-colors"
-          title="Open Command Palette (Ctrl+K)"
-        >
-          <Search className="w-3.5 h-3.5" />
-          <span className="font-mono text-[11px]">Search...</span>
-          <kbd className="text-[10px] font-mono px-1.5 py-0.5 bg-space-900 border border-slate-700 rounded text-slate-400">
-            Ctrl K
-          </kbd>
-        </button>
-
+      {/* Right: System Status & User Profile */}
+      <div className="flex items-center gap-5">
         {/* System Online Status */}
-        <div className="hidden lg:flex items-center gap-2 px-2.5 py-1 bg-space-850 border border-space-border rounded text-xs font-mono">
-          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse-subtle"></span>
-          <span className="text-[11px] text-emerald-400 font-semibold tracking-wider">SYSTEM ONLINE</span>
+        <div className="flex items-center gap-2 text-xs font-sans">
+          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+          <span className="text-slate-200 text-xs font-medium">System Online</span>
         </div>
 
+        {/* Notification Bell */}
+        <button
+          className="p-1.5 rounded text-slate-400 hover:text-slate-200 hover:bg-[#162032] transition-colors"
+          title="Notifications"
+        >
+          <Bell className="w-4 h-4" />
+        </button>
+
         {/* User Identity */}
-        <div className="flex items-center gap-2.5 border-l border-space-border pl-3">
-          <div className="w-7 h-7 rounded bg-gradient-to-br from-slate-700 to-slate-900 border border-slate-700 flex items-center justify-center text-xs font-semibold text-slate-200">
+        <div className="flex items-center gap-2.5 pl-2 border-l border-[#1e293b]">
+          <div className="w-8 h-8 rounded-full bg-[#1e293b] border border-slate-700 flex items-center justify-center text-xs font-bold text-slate-200 shadow-inner">
             SR
           </div>
-          <div className="hidden xl:block text-left">
-            <div className="text-xs font-medium text-slate-200 leading-tight">Sai Ramesh</div>
-            <div className="text-[10px] font-mono text-slate-400">Lead Analyst</div>
+          <div className="hidden lg:block text-left leading-tight">
+            <div className="text-xs font-semibold text-slate-200">Sai Ramesh</div>
+            <div className="text-[10px] text-slate-400">Lead Analyst</div>
           </div>
         </div>
       </div>
     </header>
   );
 };
+

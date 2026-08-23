@@ -17,6 +17,7 @@ export interface EvidenceRegion {
   confidence: number; // e.g. 0.94
   areaEstimate?: string;
   description?: string;
+  badgeColor?: 'amber' | 'cyan' | 'emerald' | 'rose' | 'purple';
   attributes?: Record<string, string | number>;
 }
 

@@ -1,80 +1,156 @@
 import { SatelliteImageMeta } from '../types/imagery';
 
-// High-fidelity SVG Data URIs for remote sensing scenes
+// High-fidelity Realistic Remote Sensing Scenes
 export const OPTICAL_SCENE_1_SVG = `data:image/svg+xml;utf8,${encodeURIComponent(`
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 800" width="1200" height="800">
   <defs>
-    <!-- Land textures -->
-    <pattern id="agri-fields" width="80" height="80" patternUnits="userSpaceOnUse" patternTransform="rotate(15)">
-      <rect width="80" height="80" fill="#2d3d25"/>
-      <rect x="0" y="0" width="38" height="38" fill="#384c2e"/>
-      <rect x="42" y="0" width="38" height="38" fill="#445c37"/>
-      <rect x="0" y="42" width="38" height="38" fill="#324529"/>
-      <rect x="42" y="42" width="38" height="38" fill="#293922"/>
-      <line x1="0" y1="40" x2="80" y2="40" stroke="#1d2817" stroke-width="2"/>
-      <line x1="40" y1="0" x2="40" y2="80" stroke="#1d2817" stroke-width="2"/>
-    </pattern>
-    <pattern id="urban-dense" width="40" height="40" patternUnits="userSpaceOnUse">
-      <rect width="40" height="40" fill="#4a5568"/>
-      <rect x="4" y="4" width="14" height="14" fill="#718096" rx="1"/>
-      <rect x="22" y="4" width="14" height="14" fill="#a0aec0" rx="1"/>
-      <rect x="4" y="22" width="14" height="14" fill="#cbd5e0" rx="1"/>
-      <rect x="22" y="22" width="14" height="14" fill="#4a5568" rx="1"/>
-      <path d="M0 20 h40 M20 0 v40" stroke="#2d3748" stroke-width="2"/>
-    </pattern>
-    <linearGradient id="water-grad" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="#0f2b38"/>
-      <stop offset="50%" stop-color="#143b4d"/>
-      <stop offset="100%" stop-color="#0a1d26"/>
+    <!-- Realistic Earth/Foliage Noise Filter -->
+    <filter id="terrain-noise" x="0%" y="0%" width="100%" height="100%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.08" numOctaves="5" result="noise" />
+      <feColorMatrix type="matrix" values="0.18 0.28 0.12 0 0.05  0.15 0.32 0.10 0 0.07  0.10 0.20 0.08 0 0.03  0 0 0 1 0" in="noise" result="coloredNoise"/>
+      <feBlend mode="multiply" in="SourceGraphic" in2="coloredNoise" />
+    </filter>
+
+    <filter id="water-ripple" x="0%" y="0%" width="100%" height="100%">
+      <feTurbulence type="turbulence" baseFrequency="0.02 0.04" numOctaves="3" result="turb"/>
+      <feDisplacementMap in2="turb" in="SourceGraphic" scale="8" xChannelSelector="R" yChannelSelector="G"/>
+    </filter>
+
+    <linearGradient id="river-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#3d5a5b" />
+      <stop offset="30%" stop-color="#4a6b6c" />
+      <stop offset="70%" stop-color="#324c4e" />
+      <stop offset="100%" stop-color="#24383a" />
     </linearGradient>
+
+    <!-- Urban dense building grid pattern -->
+    <pattern id="dense-settlement" width="60" height="60" patternUnits="userSpaceOnUse">
+      <rect width="60" height="60" fill="#2d372e" />
+      <circle cx="10" cy="15" r="7" fill="#1b281b" opacity="0.8"/>
+      <circle cx="45" cy="45" r="8" fill="#1f301e" opacity="0.7"/>
+      <rect x="2" y="2" width="12" height="10" fill="#8c7a6b" rx="1" />
+      <rect x="18" y="4" width="14" height="12" fill="#7a6e65" rx="1" />
+      <rect x="36" y="2" width="20" height="14" fill="#a39689" rx="1" />
+      <rect x="4" y="20" width="16" height="14" fill="#9e9184" rx="1" />
+      <rect x="24" y="22" width="18" height="16" fill="#696056" rx="1" />
+      <rect x="46" y="20" width="12" height="18" fill="#b0a599" rx="1" />
+      <rect x="6" y="40" width="18" height="16" fill="#7d7268" rx="1" />
+      <rect x="28" y="42" width="14" height="14" fill="#918579" rx="1" />
+      <rect x="46" y="42" width="12" height="14" fill="#5c544d" rx="1" />
+      <!-- Subtle road lines -->
+      <line x1="0" y1="18" x2="60" y2="18" stroke="#3e3933" stroke-width="1.5"/>
+      <line x1="0" y1="38" x2="60" y2="38" stroke="#3e3933" stroke-width="1.5"/>
+      <line x1="20" y1="0" x2="20" y2="60" stroke="#3e3933" stroke-width="1.5"/>
+      <line x1="42" y1="0" x2="42" y2="60" stroke="#3e3933" stroke-width="1.5"/>
+    </pattern>
+
+    <pattern id="dense-settlement-dark" width="50" height="50" patternUnits="userSpaceOnUse">
+      <rect width="50" height="50" fill="#263124"/>
+      <rect x="3" y="3" width="10" height="8" fill="#6e6259" rx="1"/>
+      <rect x="16" y="4" width="12" height="10" fill="#8a7c72" rx="1"/>
+      <rect x="32" y="3" width="14" height="9" fill="#584e46" rx="1"/>
+      <rect x="5" y="18" width="14" height="12" fill="#7d7168" rx="1"/>
+      <rect x="22" y="19" width="12" height="11" fill="#998d82" rx="1"/>
+      <rect x="38" y="18" width="10" height="13" fill="#61574f" rx="1"/>
+      <rect x="4" y="34" width="15" height="12" fill="#85786e" rx="1"/>
+      <rect x="24" y="35" width="11" height="11" fill="#70655c" rx="1"/>
+      <rect x="39" y="34" width="9" height="12" fill="#a1958b" rx="1"/>
+    </pattern>
   </defs>
 
-  <!-- Base Landscape -->
-  <rect width="1024" height="1024" fill="url(#agri-fields)" />
+  <!-- Base Terrain with Natural Foliage & Earth Tones -->
+  <rect width="1200" height="800" fill="#2b3826" />
+  <rect width="1200" height="800" fill="url(#dense-settlement)" opacity="0.85" />
+  <rect width="1200" height="800" fill="url(#dense-settlement-dark)" opacity="0.45" />
 
-  <!-- Natural River / Estuary System -->
-  <path d="M 0 320 C 180 340, 290 280, 480 380 C 670 480, 810 420, 1024 450 L 1024 530 C 810 500, 670 560, 480 460 C 290 360, 180 420, 0 400 Z" fill="url(#water-grad)" />
-
-  <!-- Agricultural Irrigation Channels -->
-  <path d="M 480 380 L 480 0 M 670 480 L 670 1024 M 200 400 L 200 1024" stroke="#143b4d" stroke-width="8" stroke-dasharray="16,4"/>
-
-  <!-- Urban Settlement Cluster Northern Sector -->
-  <g transform="translate(520, 80)">
-    <rect width="440" height="240" fill="#3f4a56" rx="4"/>
-    <rect width="440" height="240" fill="url(#urban-dense)" opacity="0.8"/>
-    <!-- Individual large commercial buildings -->
-    <rect x="30" y="30" width="110" height="60" fill="#cbd5e1" stroke="#334155" stroke-width="2"/>
-    <rect x="160" y="30" width="90" height="80" fill="#94a3b8" stroke="#334155" stroke-width="2"/>
-    <rect x="270" y="40" width="130" height="70" fill="#e2e8f0" stroke="#334155" stroke-width="2"/>
-    <rect x="50" y="120" width="160" height="80" fill="#f8fafc" stroke="#334155" stroke-width="2"/>
-    <rect x="230" y="130" width="170" height="70" fill="#cbd5e1" stroke="#334155" stroke-width="2"/>
+  <!-- Dense Forest / Tree Patches along Riverbanks -->
+  <g fill="#1b2a1a" opacity="0.9">
+    <ellipse cx="200" cy="180" rx="140" ry="100" />
+    <ellipse cx="380" cy="240" rx="110" ry="80" />
+    <ellipse cx="120" cy="400" rx="90" ry="120" />
+    <ellipse cx="280" cy="650" rx="160" ry="120" />
+    <ellipse cx="700" cy="150" rx="150" ry="90" />
+    <ellipse cx="950" cy="680" rx="180" ry="100" />
+    <ellipse cx="580" cy="720" rx="130" ry="70" />
+  </g>
+  <g fill="#2d4229" opacity="0.85">
+    <circle cx="180" cy="160" r="45" />
+    <circle cx="230" cy="200" r="55" />
+    <circle cx="340" cy="230" r="50" />
+    <circle cx="300" cy="630" r="70" />
+    <circle cx="240" cy="680" r="60" />
+    <circle cx="680" cy="140" r="65" />
+    <circle cx="740" cy="170" r="55" />
   </g>
 
-  <!-- Southern Industrial & Port Zone -->
-  <g transform="translate(80, 620)">
-    <rect width="520" height="340" fill="#334155" rx="6"/>
-    <rect width="520" height="340" fill="url(#urban-dense)" opacity="0.6"/>
-    <!-- Warehouses & Logistics -->
-    <rect x="40" y="40" width="200" height="90" fill="#94a3b8" stroke="#1e293b" stroke-width="3"/>
-    <rect x="270" y="40" width="200" height="90" fill="#cbd5e1" stroke="#1e293b" stroke-width="3"/>
-    <rect x="40" y="160" width="200" height="120" fill="#e2e8f0" stroke="#1e293b" stroke-width="3"/>
-    <rect x="270" y="160" width="200" height="120" fill="#f1f5f9" stroke="#1e293b" stroke-width="3"/>
+  <!-- River Basin / Waterbody flowing diagonally -->
+  <!-- River Sandbar / Beach edges -->
+  <path d="M 0 280 Q 250 320, 520 440 T 950 630 L 950 720 Q 600 580, 420 480 T 0 380 Z" fill="#6d7a65" opacity="0.6"/>
+  
+  <!-- Main River Flow -->
+  <path d="M -20 290 Q 240 330, 510 445 Q 720 535, 960 645 L 960 710 Q 700 575, 450 475 Q 220 380, -20 355 Z" fill="url(#river-grad)" />
+  <path d="M 200 340 Q 450 430, 750 560 L 740 575 Q 440 445, 190 355 Z" fill="#4d6f70" opacity="0.7"/>
+  <path d="M 500 460 Q 700 545, 880 620 L 875 632 Q 695 555, 495 470 Z" fill="#608688" opacity="0.5"/>
+
+  <!-- Secondary Stream / Canal -->
+  <path d="M 510 445 Q 550 560, 560 800" stroke="#3d5a5b" stroke-width="12" fill="none" opacity="0.85"/>
+  <path d="M 280 0 Q 320 180, 360 350" stroke="#3d5a5b" stroke-width="8" fill="none" opacity="0.7"/>
+
+  <!-- Arterial Highway / Express Transport Corridor -->
+  <!-- Road shadow & base -->
+  <path d="M 480 -20 L 520 350 L 530 490 L 545 820" stroke="#181e24" stroke-width="26" fill="none"/>
+  <!-- Pavement -->
+  <path d="M 480 -20 L 520 350 L 530 490 L 545 820" stroke="#48535e" stroke-width="20" fill="none"/>
+  <!-- Center divider lines -->
+  <path d="M 480 -20 L 520 350 L 530 490 L 545 820" stroke="#f1f5f9" stroke-width="1.5" stroke-dasharray="8,6" fill="none"/>
+
+  <!-- Bridge Crossing spanning the river -->
+  <g>
+    <!-- Bridge Piers shadow in water -->
+    <rect x="508" y="380" width="34" height="95" fill="#0d1819" opacity="0.7" transform="rotate(3 525 425)"/>
+    <!-- Bridge Deck -->
+    <rect x="510" y="370" width="28" height="110" fill="#64748b" stroke="#cbd5e1" stroke-width="1.5" transform="rotate(3 524 425)"/>
+    <!-- Bridge median -->
+    <line x1="524" y1="370" x2="530" y2="480" stroke="#e2e8f0" stroke-width="1.5"/>
+    <line x1="517" y1="372" x2="523" y2="478" stroke="#334155" stroke-width="1"/>
+    <line x1="531" y1="372" x2="537" y2="478" stroke="#334155" stroke-width="1"/>
   </g>
 
-  <!-- Arterial Highway / Transportation Corridor -->
-  <path d="M 120 0 L 380 500 L 920 1024" stroke="#1e293b" stroke-width="36" fill="none" stroke-linecap="square"/>
-  <path d="M 120 0 L 380 500 L 920 1024" stroke="#64748b" stroke-width="28" fill="none" stroke-linecap="square"/>
-  <path d="M 120 0 L 380 500 L 920 1024" stroke="#fef08a" stroke-width="2" stroke-dasharray="14,14" fill="none"/>
+  <!-- Commercial & Industrial Planned Clusters (Bottom Left) -->
+  <g transform="translate(330, 480)">
+    <!-- Industrial Campus Perimeter -->
+    <rect width="130" height="115" fill="#384337" opacity="0.8" rx="2"/>
+    <!-- Internal Access Roads -->
+    <path d="M 15 10 L 115 10 L 115 105 L 15 105 Z" stroke="#525f6c" stroke-width="4" fill="none"/>
+    <line x1="65" y1="10" x2="65" y2="105" stroke="#525f6c" stroke-width="4"/>
+    <!-- Warehouse & Facility Buildings -->
+    <rect x="25" y="20" width="32" height="28" fill="#d1d5db" stroke="#1f2937" stroke-width="1.5" rx="1"/>
+    <rect x="72" y="20" width="35" height="28" fill="#e5e7eb" stroke="#1f2937" stroke-width="1.5" rx="1"/>
+    <rect x="25" y="58" width="32" height="34" fill="#9ca3af" stroke="#1f2937" stroke-width="1.5" rx="1"/>
+    <rect x="72" y="58" width="35" height="34" fill="#f3f4f6" stroke="#1f2937" stroke-width="1.5" rx="1"/>
+  </g>
 
-  <!-- Bridge Crossing over Estuary -->
-  <rect x="340" y="410" width="70" height="60" fill="#475569" stroke="#cbd5e1" stroke-width="2" transform="rotate(-30 375 440)"/>
+  <!-- Built-up Urban Block (Top Right) -->
+  <g transform="translate(630, 160)">
+    <rect width="125" height="95" fill="#3f483d" opacity="0.85" rx="2"/>
+    <!-- Complex Buildings with Shadows -->
+    <rect x="15" y="15" width="40" height="28" fill="#9ca3af" stroke="#1f2937" stroke-width="1.5" rx="1"/>
+    <rect x="65" y="15" width="45" height="30" fill="#e5e7eb" stroke="#1f2937" stroke-width="1.5" rx="1"/>
+    <rect x="20" y="52" width="35" height="28" fill="#d1d5db" stroke="#1f2937" stroke-width="1.5" rx="1"/>
+    <rect x="65" y="52" width="45" height="30" fill="#f3f4f6" stroke="#1f2937" stroke-width="1.5" rx="1"/>
+  </g>
 
-  <!-- Coastal / Estuary Sandbar -->
-  <path d="M 940 380 Q 980 430 1024 410 L 1024 490 Q 960 480 920 440 Z" fill="#786d52"/>
+  <!-- Secondary Built-up Commercial Block (Mid Right) -->
+  <g transform="translate(690, 260)">
+    <rect width="95" height="90" fill="#3d463b" opacity="0.8" rx="2"/>
+    <rect x="10" y="10" width="32" height="32" fill="#cbd5e1" stroke="#1f2937" stroke-width="1.5" rx="1"/>
+    <rect x="50" y="10" width="32" height="32" fill="#e2e8f0" stroke="#1f2937" stroke-width="1.5" rx="1"/>
+    <rect x="10" y="48" width="32" height="32" fill="#94a3b8" stroke="#1f2937" stroke-width="1.5" rx="1"/>
+    <rect x="50" y="48" width="32" height="32" fill="#f8fafc" stroke="#1f2937" stroke-width="1.5" rx="1"/>
+  </g>
 
-  <!-- Telemetry Watermark Overlay -->
-  <text x="30" y="50" fill="#38bdf8" opacity="0.7" font-family="monospace" font-size="16" font-weight="600">ISRO CARTOSAT-2S // CHENNAI S01 // RGB 1.2M</text>
-  <text x="30" y="75" fill="#94a3b8" opacity="0.6" font-family="monospace" font-size="13">LAT: 13.0827° N  LON: 80.2707° E // EPSG:4326</text>
+  <!-- Local Network of Streets -->
+  <path d="M 520 350 L 850 320 M 530 490 L 880 500 M 510 220 L 200 240 M 530 620 L 280 640 M 630 160 L 630 380 M 760 160 L 760 380" stroke="#4b5563" stroke-width="4" fill="none" opacity="0.75"/>
 </svg>
 `)}`;
 
