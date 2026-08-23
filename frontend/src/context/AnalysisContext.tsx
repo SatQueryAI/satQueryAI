@@ -3,6 +3,7 @@ import { SatelliteImageMeta, AnalysisMode, LayerVisibility } from '../types/imag
 import { AnalysisResult } from '../types/analysis';
 import { MOCK_SATELLITE_IMAGES } from '../data/mockImagery';
 import { MOCK_ANALYSIS_PRESETS, generateMockAnalysis } from '../data/mockAnalyses';
+import { uploadImage, listImages, StorageServiceError, DatabaseServiceError } from '../lib/appwrite';
 import { apiService } from '../services/api';
 
 interface AnalysisContextType {
@@ -21,6 +22,9 @@ interface AnalysisContextType {
   splitPosition: number;
   sarViewMode: 'OPTICAL' | 'SAR' | 'FUSED';
   commandPaletteOpen: boolean;
+  isUploading: boolean;
+  uploadProgress: number;
+  uploadError: string | null;
   
   setSelectedImage: (image: SatelliteImageMeta) => void;
   setAnalysisMode: (mode: AnalysisMode) => void;
@@ -35,7 +39,8 @@ interface AnalysisContextType {
   setSarViewMode: (mode: 'OPTICAL' | 'SAR' | 'FUSED') => void;
   setCommandPaletteOpen: (open: boolean) => void;
   loadPreset: (presetId: string) => void;
-  handleFileUpload: (file: File) => void;
+  handleFileUpload: (file: File) => Promise<void>;
+  clearUploadError: () => void;
 }
 
 const defaultLayers: LayerVisibility = {
@@ -66,6 +71,9 @@ export const AnalysisProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [splitPosition, setSplitPosition] = useState<number>(50);
   const [sarViewMode, setSarViewMode] = useState<'OPTICAL' | 'SAR' | 'FUSED'>('OPTICAL');
   const [commandPaletteOpen, setCommandPaletteOpen] = useState<boolean>(false);
+  const [isUploading, setIsUploading] = useState<boolean>(false);
+  const [uploadProgress, setUploadProgress] = useState<number>(0);
+  const [uploadError, setUploadError] = useState<string | null>(null);
 
   // Global Ctrl+K / Cmd+K listener
   useEffect(() => {
@@ -79,6 +87,26 @@ export const AnalysisProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
+  // Load persistent uploaded imagery from Appwrite on application startup
+  useEffect(() => {
+    async function loadPersistedImages() {
+      try {
+        const persisted = await listImages();
+        if (persisted && persisted.length > 0) {
+          const appMetaList = persisted.map((p) => p.appMeta);
+          setUploadedImages((prev) => {
+            const combined = [...appMetaList, ...prev.filter((m) => !appMetaList.some((a) => a.id === m.id))];
+            return combined;
+          });
+          setSelectedImage(appMetaList[0]);
+        }
+      } catch (err) {
+        console.warn('Could not load persisted images from Appwrite:', err);
+      }
+    }
+    loadPersistedImages();
+  }, []);
+
   const toggleLayer = (layerKey: keyof LayerVisibility) => {
     setLayerVisibility((prev) => ({
       ...prev,
@@ -89,6 +117,10 @@ export const AnalysisProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const resetViewport = () => {
     setZoomLevel(100);
     setPanOffset({ x: 0, y: 0 });
+  };
+
+  const clearUploadError = () => {
+    setUploadError(null);
   };
 
   const loadPreset = (presetId: string) => {
@@ -108,15 +140,12 @@ export const AnalysisProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   const runAnalysis = async (customQuery?: string) => {
     const queryToExecute = customQuery || currentQuery;
-    if (!queryToExecute.trim()) return;
-
     setIsAnalyzing(true);
     setCurrentResult(null);
 
     const stages = [
-      'Validating GeoTIFF raster & CRS projection...',
-      'Partitioning spatial patches & radiometric normalization...',
-      'Classifying query intent & selecting vision-language pathway...',
+      'Ingesting raster tile and verifying Coordinate Reference System (CRS)...',
+      'Routing query to multi-spectral attention & spectral index engine...',
       'Executing Remote-Sensing VLM inference on GPU...',
       'Extracting visual grounding coordinates & calibrating confidence...',
     ];
@@ -141,70 +170,65 @@ export const AnalysisProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }
   };
 
+  /**
+   * Complete Appwrite upload flow:
+   * 1. Validate file format (.tif, .tiff, .png, .jpg, .jpeg)
+   * 2. Upload binary directly to Appwrite Storage (bucket: 6a8ac4580027071eb467)
+   * 3. Create metadata document in Appwrite Database (database: 6a8ac43a0027d3534c2c)
+   * 4. Update UI with the persistent Appwrite image reference
+   */
   const handleFileUpload = async (file: File) => {
-    const objectUrl = URL.createObjectURL(file);
-    const fallbackId = `img_${Math.random().toString(16).substring(2, 7)}`;
-    
-    // Optimistic / fallback metadata
-    let newImage: SatelliteImageMeta = {
-      id: fallbackId,
-      name: file.name.replace(/\.[^/.]+$/, '').toUpperCase(),
-      filename: file.name,
-      sensor: file.name.toLowerCase().includes('sar') ? 'Sentinel-1 SAR' : 'Cartosat-2S',
-      platform: 'Spaceborne Remote Sensing',
-      modality: file.name.toLowerCase().includes('sar') ? 'SAR' : 'OPTICAL',
-      acquisitionDate: new Date().toISOString().split('T')[0],
-      acquisitionTime: '10:30:00 UTC',
-      resolution: '1.2 m GSD',
-      dimensions: { width: 2048, height: 2048 },
-      bandsCount: 4,
-      bandsList: [
-        { name: 'Band 1 (Blue)', description: '450-515 nm Coastal' },
-        { name: 'Band 2 (Green)', description: '525-600 nm Vegetation' },
-        { name: 'Band 3 (Red)', description: '630-690 nm Visual Land' },
-        { name: 'Band 4 (NIR)', description: '770-895 nm Biomass/Infrared' },
-      ],
-      crs: 'EPSG:4326',
-      coordinates: {
-        lat: 13.0827,
-        lon: 80.2707,
-        bbox: [80.22, 13.03, 80.28, 13.07],
-        locationName: file.name.replace(/\.[^/.]+$/, ''),
-      },
-      thumbnailUrl: objectUrl,
-      fullImageUrl: objectUrl,
-      fileSizeBytes: `${(file.size / (1024 * 1024)).toFixed(2)} MB`,
-    };
+    if (isUploading) return; // Prevent duplicate concurrent uploads
+
+    setIsUploading(true);
+    setUploadProgress(0);
+    setUploadError(null);
 
     try {
-      // Call Backend POST /api/images/upload
-      const res = await apiService.uploadImage(file);
-      const isSar = res.modality.toLowerCase().includes('sar');
-      const modalityFormatted = isSar ? 'SAR' : (res.modality.toUpperCase() as any);
-      
-      newImage = {
-        ...newImage,
-        id: res.image_id,
-        filename: res.filename,
-        sensor: res.sensor,
-        modality: modalityFormatted === 'SAR' ? 'SAR' : 'OPTICAL',
-        resolution: `${res.resolution} m GSD`,
-        dimensions: { width: res.width, height: res.height },
-        bandsCount: res.bands,
-        crs: res.crs,
-        thumbnailUrl: res.thumbnail_url ? res.thumbnail_url : objectUrl,
-        fullImageUrl: objectUrl,
-        fileSizeBytes: res.file_size_bytes 
-          ? `${(res.file_size_bytes / (1024 * 1024)).toFixed(2)} MB`
-          : `${(file.size / (1024 * 1024)).toFixed(2)} MB`,
-      };
-    } catch (err) {
-      console.warn('Backend upload returned error or unreachable, using local metadata parser:', err);
-    }
+      // 1. Upload to Appwrite Storage & Database
+      const appwriteResult = await uploadImage(file, {
+        onProgress: (percent) => setUploadProgress(percent),
+      });
 
-    setUploadedImages((prev) => [newImage, ...prev]);
-    setSelectedImage(newImage);
-    resetViewport();
+      let finalMeta: SatelliteImageMeta = appwriteResult.appMeta;
+
+      // 2. Also optionally notify FastAPI backend if running (graceful fallback)
+      try {
+        const backendRes = await apiService.uploadImage(file);
+        if (backendRes) {
+          finalMeta = {
+            ...finalMeta,
+            resolution: `${backendRes.resolution} m GSD`,
+            dimensions: { width: backendRes.width, height: backendRes.height },
+            bandsCount: backendRes.bands,
+            sensor: backendRes.sensor || finalMeta.sensor,
+            crs: backendRes.crs || finalMeta.crs,
+          };
+        }
+      } catch {
+        // Backend optional for pure client Appwrite upload
+      }
+
+      setUploadedImages((prev) => [finalMeta, ...prev]);
+      setSelectedImage(finalMeta);
+      resetViewport();
+    } catch (err: any) {
+      console.error('Imagery upload failed:', err);
+      let userFriendlyMessage = 'Unable to upload imagery.\nPlease try again.';
+
+      if (err instanceof StorageServiceError) {
+        userFriendlyMessage = err.message;
+      } else if (err instanceof DatabaseServiceError) {
+        userFriendlyMessage = err.message;
+      } else if (err?.message) {
+        userFriendlyMessage = err.message;
+      }
+
+      setUploadError(userFriendlyMessage);
+    } finally {
+      setIsUploading(false);
+      setUploadProgress(100);
+    }
   };
 
   return (
@@ -225,6 +249,9 @@ export const AnalysisProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         splitPosition,
         sarViewMode,
         commandPaletteOpen,
+        isUploading,
+        uploadProgress,
+        uploadError,
         setSelectedImage,
         setAnalysisMode,
         toggleLayer,
@@ -239,6 +266,7 @@ export const AnalysisProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         setCommandPaletteOpen,
         loadPreset,
         handleFileUpload,
+        clearUploadError,
       }}
     >
       {children}

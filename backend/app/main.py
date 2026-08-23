@@ -5,6 +5,7 @@ from fastapi.staticfiles import StaticFiles
 from app.core.config import settings
 from app.api.images import router as images_router
 from app.api.system import router as system_router
+from app.api.query import router as query_router
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
@@ -26,6 +27,7 @@ app.add_middleware(
 # Include API Routers
 app.include_router(images_router, prefix=settings.API_V1_PREFIX)
 app.include_router(system_router, prefix=settings.API_V1_PREFIX)
+app.include_router(query_router, prefix=settings.API_V1_PREFIX)
 
 @app.get("/", tags=["Root"])
 async def root():
@@ -36,6 +38,7 @@ async def root():
             "upload_image": "POST /api/images/upload",
             "image_metadata": "GET /api/images/{image_id}",
             "image_preview": "GET /api/images/{image_id}/preview",
+            "query": "POST /api/query",
             "health": "GET /api/system/health"
         }
     }
